@@ -57,29 +57,15 @@
         renderer = new THREE.WebGLRenderer();
         element = renderer.domElement;
         container = document.getElementById('webglviewer');
-        //container.appendChild(element);
+        container.appendChild(element);
 
         effect = new THREE.StereoEffect(renderer);
-
-        // Our initial control fallback with mouse/touch events in case DeviceOrientation is not enabled
-        controls = new THREE.OrbitControls(camera, element);
-        controls.target.set(
-          camera.position.x + 0.15,
-          camera.position.y,
-          camera.position.z
-        );
-        controls.noPan = true;
-        controls.noZoom = true;
 
         // Our preferred controls via DeviceOrientation
         function setOrientationControls(e) {
           if (!e.alpha) {
             return;
           }
-
-          controls = new THREE.DeviceOrientationControls(camera, true);
-          controls.connect();
-          controls.update();
 
           element.addEventListener('click', fullscreen, false);
 
@@ -138,6 +124,29 @@
           texture = new THREE.Texture(canvas);
           texture.video = video;
           texture.context = context;
+          texture.minFilter = THREE.NearestFilter;
+
+          var cameraPlane = new THREE.PlaneGeometry(1200, 900);
+
+          cameraMesh = new THREE.Mesh(cameraPlane, new THREE.MeshBasicMaterial({
+            color: 0xffffff, opacity: 1, map: texture, side: THREE.DoubleSide
+          }));
+          cameraMesh.position.z = -100;
+
+          scene.add(cameraMesh);
+
+          var floorMaterial = new THREE.MeshBasicMaterial({
+            color: 0xffffff
+          });
+
+          var geometry = new THREE.PlaneBufferGeometry(1000, 1000);
+
+          var light = new THREE.AmbientLight( 0x404040 );
+          scene.add(light);
+
+          var lightScene = new THREE.PointLight(0x999999, 2, 100);
+          lightScene.position.set(0, 5, 0);
+          scene.add(lightScene);
         }
 
         function streamError(error) {
@@ -149,7 +158,13 @@
 
 
       function animate() {
-        if (context) context.drawImage(video, 0, 0, canvas.width, canvas.height);
+        if (context) {
+          context.drawImage(video, 0, 0, canvas.width, canvas.height);
+          
+          if (video.readyState === video.HAVE_ENOUGH_DATA) {
+            texture.needsUpdate = true;
+          }
+        }
 
         requestAnimationFrame(animate);
 
@@ -173,7 +188,7 @@
 
         camera.updateProjectionMatrix();
 
-        controls.update(dt);
+        //controls.update(dt);
       }
 
       function render(dt) {
