@@ -39,6 +39,9 @@
           clock,
           hasUserMedia,
           camView,
+          video,
+          canvas,
+          context,
 
           currentCityText = new THREE.TextGeometry(),
           currentCityTextMesh = new THREE.Mesh();
@@ -86,13 +89,14 @@
 
         clock = new THREE.Clock();
 
-        var video = document.createElement('video'),
-            options = {
-              video: {
-                optional: [{facingMode: "environment"}]
-              }
-            };
+        video = document.createElement('video');
         video.setAttribute('autoplay', true);
+        
+        var options = {
+          video: {
+            optional: [{facingMode: "environment"}]
+          }
+        };
 
         navigator.getUserMedia = navigator.getUserMedia ||
         navigator.webkitGetUserMedia || navigator.mozGetUserMedia;
@@ -120,7 +124,20 @@
           console.log('Got stream, gonna play it');
           document.body.appendChild(video);
           video.src = URL.createObjectURL(stream);
+          video.style.width = '100%';
+          video.style.height = '100%';
           video.play();
+
+          canvas = document.createElement('canvas');
+          console.log(video.clientWidth, video.clientHeight);
+          canvas.width = video.clientWidth;
+          canvas.height = video.clientHeight;
+          document.body.appendChild(canvas);
+
+          context = canvas.getContext('2d');
+          texture = new THREE.Texture(canvas);
+          texture.video = video;
+          texture.context = context;
         }
 
         function streamError(error) {
@@ -132,6 +149,8 @@
 
 
       function animate() {
+        if (context) context.drawImage(video, 0, 0, canvas.width, canvas.height);
+
         requestAnimationFrame(animate);
 
         update(clock.getDelta());
