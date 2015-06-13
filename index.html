@@ -15,6 +15,7 @@
         position: absolute;
         right: 0;
         top: 0;
+        z-index: 100;
       }
     </style>
   </head>
@@ -26,7 +27,6 @@
     <script src="./js/DeviceOrientationControls.js"></script>
     <script src="./js/OrbitControls.js"></script>
     <script src="./js/helvetiker_regular.typeface.js"></script>
-    <script src="https://timezonedb.googlecode.com/files/timezonedb.js" type="text/javascript"></script>
 
     <script>
       var scene,
@@ -67,6 +67,8 @@
             return;
           }
 
+          console.log('Renderer is ', element);
+
           element.addEventListener('click', fullscreen, false);
 
           window.removeEventListener('deviceorientation', setOrientationControls, true);
@@ -103,11 +105,14 @@
             }
             
             navigator.getUserMedia(options, streamFound, streamError);
+
+            console.log(options.video);
           });
         }
 
         function streamFound(stream) {
           console.log('Got stream, gonna play it');
+          console.log(stream);
           document.body.appendChild(video);
           video.src = URL.createObjectURL(stream);
           video.style.width = '100%';
@@ -115,23 +120,28 @@
           video.play();
 
           canvas = document.createElement('canvas');
-          console.log(video.clientWidth, video.clientHeight);
           canvas.width = video.clientWidth;
           canvas.height = video.clientHeight;
-          document.body.appendChild(canvas);
+          canvas.width = nextPowerOf2(canvas.width);
+          canvas.height = nextPowerOf2(canvas.height);
+
+          function nextPowerOf2(x) { 
+              return Math.pow(2, Math.ceil(Math.log(x) / Math.log(2))); 
+          }
 
           context = canvas.getContext('2d');
           texture = new THREE.Texture(canvas);
           texture.video = video;
           texture.context = context;
-          texture.minFilter = THREE.NearestFilter;
+          texture.minFilter = THREE.LinearMipMapLinearFilter;
+          texture.magFilter = THREE.NearestFilter;
 
-          var cameraPlane = new THREE.PlaneGeometry(1200, 900);
+          var cameraPlane = new THREE.PlaneGeometry(1920, 1280);
 
           cameraMesh = new THREE.Mesh(cameraPlane, new THREE.MeshBasicMaterial({
             color: 0xffffff, opacity: 1, map: texture, side: THREE.DoubleSide
           }));
-          cameraMesh.position.z = -100;
+          cameraMesh.position.z = -600;
 
           scene.add(cameraMesh);
 
@@ -160,10 +170,30 @@
       function animate() {
         if (context) {
           context.drawImage(video, 0, 0, canvas.width, canvas.height);
-          
-          if (video.readyState === video.HAVE_ENOUGH_DATA) {
-            texture.needsUpdate = true;
+
+          var imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+          var data = imageData.data;
+
+          for (var i = 0; i < data.length; i+=4) {
+            var red = data[i],
+                green = data[i+1],
+                blue = data[i+2];
+
+            red = 0;
+            blue = 0;
+            
+            data[i] = red;
+            data[i+1] = green;
+            data[i+2] = blue;
           }
+
+          imageData.data = data;
+
+          context.putImageData(imageData, 0, 0);
+          
+          //if (video.readyState === video.HAVE_ENOUGH_DATA) {
+            texture.needsUpdate = true;
+          //}
         }
 
         requestAnimationFrame(animate);
@@ -196,6 +226,7 @@
       }
 
       function fullscreen() {
+        console.log('Full screen requested');
         if (container.requestFullscreen) {
           container.requestFullscreen();
         } else if (container.msRequestFullscreen) {
@@ -205,24 +236,6 @@
         } else if (container.webkitRequestFullscreen) {
           container.webkitRequestFullscreen();
         }
-      }
-
-      function getURL(url, callback) {
-        var xmlhttp = new XMLHttpRequest();
-
-        xmlhttp.onreadystatechange = function() {
-          if (xmlhttp.readyState == 4) {
-             if (xmlhttp.status == 200){
-                 callback(JSON.parse(xmlhttp.responseText));
-             }
-             else {
-                 console.log('We had an error, status code: ', xmlhttp.status);
-             }
-          }
-        }
-
-        xmlhttp.open('GET', url, true);
-        xmlhttp.send();
       }
     </script>
   </body>
