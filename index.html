@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
   <head>
-    <title>Google Cardboard Crazy World Goggles</title>
+    <title>Reality Filter</title>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     <meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
     <style>
@@ -26,6 +26,7 @@
     <script src="./js/StereoEffect.js"></script>
     <script src="./js/DeviceOrientationControls.js"></script>
     <script src="./js/OrbitControls.js"></script>
+    <script src="./js/close-pixelate.js"></script>
     <script src="./js/helvetiker_regular.typeface.js"></script>
 
     <script>
@@ -42,9 +43,9 @@
           video,
           canvas,
           context,
-
-          currentCityText = new THREE.TextGeometry(),
-          currentCityTextMesh = new THREE.Mesh();
+          themes = ['sepia', 'arcade', 'inverse', 'blackandwhite', 'green'],
+          currentTheme = 0,
+          lookingAtGround = false;
 
       init();
 
@@ -67,13 +68,25 @@
             return;
           }
 
-          console.log('Renderer is ', element);
-
           element.addEventListener('click', fullscreen, false);
 
           window.removeEventListener('deviceorientation', setOrientationControls, true);
         }
         window.addEventListener('deviceorientation', setOrientationControls, true);
+
+        if (window.DeviceOrientationEvent) {
+          window.addEventListener('deviceorientation', function(evt) {
+            console.log(evt.gamma)
+            if (evt.gamma > -1 && evt.gamma < 1 && !lookingAtGround) {
+              lookingAtGround = true;
+              currentTheme = (themes.length > currentTheme+1) ? currentTheme+1 : 0;
+
+              setTimeout(function() {
+                lookingAtGround = false;
+              }, 4000);
+            }
+          }.bind(this));
+        }
 
         clock = new THREE.Clock();
 
@@ -171,29 +184,107 @@
         if (context) {
           context.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-          var imageData = context.getImageData(0, 0, canvas.width, canvas.height);
-          var data = imageData.data;
+          if (themes[currentTheme] == 'green') {
+            var imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+            var data = imageData.data;
 
-          for (var i = 0; i < data.length; i+=4) {
-            var red = data[i],
-                green = data[i+1],
-                blue = data[i+2];
+            for (var i = 0; i < data.length; i+=4) {
+              var red = data[i],
+                  green = data[i+1],
+                  blue = data[i+2];
 
-            red = 0;
-            blue = 0;
-            
-            data[i] = red;
-            data[i+1] = green;
-            data[i+2] = blue;
+              red = 0;
+              blue = 0;
+              
+              data[i] = red;
+              data[i+1] = green;
+              data[i+2] = blue;
+            }
+
+            imageData.data = data;
+
+            context.putImageData(imageData, 0, 0);
+          } else if (themes[currentTheme] == 'blackandwhite') {
+            var imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+            var data = imageData.data;
+
+            for (var i = 0; i < data.length; i+=4) {
+              var red = data[i],
+                  green = data[i+1],
+                  blue = data[i+2],
+                  luminance = ((red * 299) + (green * 587) + (blue * 114)) / 1000;
+
+              red = luminance;
+              green = luminance;
+              blue = luminance;
+              
+              data[i] = red;
+              data[i+1] = green;
+              data[i+2] = blue;
+            }
+
+            imageData.data = data;
+
+            context.putImageData(imageData, 0, 0);
+          } else if (themes[currentTheme] == 'inverse') {
+            var imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+            var data = imageData.data;
+
+            for (var i = 0; i < data.length; i+=4) {
+              var red = 255 - data[i],
+                  green = 255 - data[i+1],
+                  blue = 255 - data[i+2];
+
+              data[i] = red;
+              data[i+1] = green;
+              data[i+2] = blue;
+            }
+
+            imageData.data = data;
+
+            context.putImageData(imageData, 0, 0);
+          } else if (themes[currentTheme] == 'sepia') {
+            var imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+            var data = imageData.data;
+
+            for (var i = 0; i < data.length; i+=4) {
+              var red = data[i],
+                  green = data[i+1],
+                  blue = data[i+2];
+                  
+              var sepiaRed = (red * 0.393) + (green * 0.769) + (blue * 0.189);
+              var sepiaGreen = (red * 0.349) + (green * 0.686) + (blue * 0.168);
+              var sepiaBlue = (red * 0.272) + (green * 0.534) + (blue * 0.131);
+
+              var randomRed = Math.random() * 50;
+
+              sepiaRed += randomRed;
+              sepiaGreen += randomRed;
+              sepiaBlue += randomRed;
+
+              sepiaRed = sepiaRed > 255 ? 255 : sepiaRed;
+              sepiaGreen = sepiaGreen > 255 ? 255 : sepiaGreen;
+              sepiaBlue = sepiaBlue > 255 ? 255 : sepiaBlue;
+
+              data[i] = sepiaRed;
+              data[i+1] = sepiaGreen;
+              data[i+2] = sepiaBlue;
+            }
+
+            imageData.data = data;
+
+            context.putImageData(imageData, 0, 0);
+          } else if (themes[currentTheme] == 'arcade') {
+            ClosePixelation(canvas, context, [
+              {
+                resolution: 6
+              }
+            ]);
           }
 
-          imageData.data = data;
-
-          context.putImageData(imageData, 0, 0);
-          
-          //if (video.readyState === video.HAVE_ENOUGH_DATA) {
+          if (video.readyState === video.HAVE_ENOUGH_DATA) {
             texture.needsUpdate = true;
-          //}
+          }
         }
 
         requestAnimationFrame(animate);
