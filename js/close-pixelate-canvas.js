@@ -1,4 +1,16 @@
 /*!
+ * Close Pixelate Canvas edition
+ *  
+ * An adjusted version of the Close Pixelate JS plugin that
+ * accepts a canvas element and returns a pixelated version.
+ *
+ * Adjusted by
+ * - Patrick Catanzariti  http://patcat.com
+ *
+ * (Original authors, version and such listed below)
+ *
+ * --------------------------------------------------------
+ *
  * Close Pixelate v2.0.00 beta
  * http://desandro.com/resources/close-pixelate/
  * 

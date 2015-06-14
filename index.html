@@ -24,10 +24,7 @@
 
     <script src="./js/three.min.js"></script>
     <script src="./js/StereoEffect.js"></script>
-    <script src="./js/DeviceOrientationControls.js"></script>
-    <script src="./js/OrbitControls.js"></script>
-    <script src="./js/close-pixelate.js"></script>
-    <script src="./js/helvetiker_regular.typeface.js"></script>
+    <script src="./js/close-pixelate-canvas.js"></script>
 
     <script>
       var scene,
@@ -36,14 +33,13 @@
           element,
           container,
           effect,
-          controls,
           clock,
           hasUserMedia,
           camView,
           video,
           canvas,
           context,
-          themes = ['sepia', 'arcade', 'inverse', 'blackandwhite', 'green'],
+          themes = ['blackandwhite', 'sepia', 'arcade', 'inverse'],
           currentTheme = 0,
           lookingAtGround = false;
 
@@ -76,7 +72,6 @@
 
         if (window.DeviceOrientationEvent) {
           window.addEventListener('deviceorientation', function(evt) {
-            console.log(evt.gamma)
             if (evt.gamma > -1 && evt.gamma < 1 && !lookingAtGround) {
               lookingAtGround = true;
               currentTheme = (themes.length > currentTheme+1) ? currentTheme+1 : 0;
@@ -118,14 +113,10 @@
             }
             
             navigator.getUserMedia(options, streamFound, streamError);
-
-            console.log(options.video);
           });
         }
 
         function streamFound(stream) {
-          console.log('Got stream, gonna play it');
-          console.log(stream);
           document.body.appendChild(video);
           video.src = URL.createObjectURL(stream);
           video.style.width = '100%';
@@ -164,12 +155,6 @@
 
           var geometry = new THREE.PlaneBufferGeometry(1000, 1000);
 
-          var light = new THREE.AmbientLight( 0x404040 );
-          scene.add(light);
-
-          var lightScene = new THREE.PointLight(0x999999, 2, 100);
-          lightScene.position.set(0, 5, 0);
-          scene.add(lightScene);
         }
 
         function streamError(error) {
@@ -184,27 +169,7 @@
         if (context) {
           context.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-          if (themes[currentTheme] == 'green') {
-            var imageData = context.getImageData(0, 0, canvas.width, canvas.height);
-            var data = imageData.data;
-
-            for (var i = 0; i < data.length; i+=4) {
-              var red = data[i],
-                  green = data[i+1],
-                  blue = data[i+2];
-
-              red = 0;
-              blue = 0;
-              
-              data[i] = red;
-              data[i+1] = green;
-              data[i+2] = blue;
-            }
-
-            imageData.data = data;
-
-            context.putImageData(imageData, 0, 0);
-          } else if (themes[currentTheme] == 'blackandwhite') {
+          if (themes[currentTheme] == 'blackandwhite') {
             var imageData = context.getImageData(0, 0, canvas.width, canvas.height);
             var data = imageData.data;
 
@@ -212,12 +177,21 @@
               var red = data[i],
                   green = data[i+1],
                   blue = data[i+2],
-                  luminance = ((red * 299) + (green * 587) + (blue * 114)) / 1000;
+                  luminance = ((red * 299) + (green * 587) + (blue * 114)) / 1000; // Gives a value from 0 - 255
+              if (luminance > 175) {
+                red = 255;
+                green = 255;
+                blue = 255;
+              } else if (luminance >= 100 && luminance <= 175) {
+                red = 190;
+                green = 190;
+                blue = 190;
+              } else if (luminance < 100) {
+                red = 0;
+                green = 0;
+                blue = 0;
+              }
 
-              red = luminance;
-              green = luminance;
-              blue = luminance;
-              
               data[i] = red;
               data[i+1] = green;
               data[i+2] = blue;
@@ -308,8 +282,6 @@
         resize();
 
         camera.updateProjectionMatrix();
-
-        //controls.update(dt);
       }
 
       function render(dt) {
@@ -317,7 +289,6 @@
       }
 
       function fullscreen() {
-        console.log('Full screen requested');
         if (container.requestFullscreen) {
           container.requestFullscreen();
         } else if (container.msRequestFullscreen) {
