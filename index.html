@@ -33,9 +33,6 @@
           element,
           container,
           effect,
-          clock,
-          hasUserMedia,
-          camView,
           video,
           canvas,
           context,
@@ -58,17 +55,7 @@
 
         effect = new THREE.StereoEffect(renderer);
 
-        // Our preferred controls via DeviceOrientation
-        function setOrientationControls(e) {
-          if (!e.alpha) {
-            return;
-          }
-
-          element.addEventListener('click', fullscreen, false);
-
-          window.removeEventListener('deviceorientation', setOrientationControls, true);
-        }
-        window.addEventListener('deviceorientation', setOrientationControls, true);
+        element.addEventListener('click', fullscreen, false);
 
         if (window.DeviceOrientationEvent) {
           window.addEventListener('deviceorientation', function(evt) {
@@ -82,8 +69,6 @@
             }
           }.bind(this));
         }
-
-        clock = new THREE.Clock();
 
         video = document.createElement('video');
         video.setAttribute('autoplay', true);
@@ -100,14 +85,12 @@
         if (typeof MediaStreamTrack === 'undefined' && navigator.getUserMedia) {
           alert('This browser doesn\'t support this demo :(');
         } else {
-          MediaStreamTrack.getSources(function(sourceInfos) {
-            var selected_source = null;
-            for (var i = 0; i !== sourceInfos.length; ++i) {
-              var sourceInfo = sourceInfos[i];
-              if (sourceInfo.kind === 'video') {
-                if (sourceInfo.facing && sourceInfo.facing == "environment") {
-                  selected_source = sourceInfo.id;
-                  options.video.optional.push({'sourceId': sourceInfo.id});
+          MediaStreamTrack.getSources(function(sources) {
+            for (var i = 0; i !== sources.length; ++i) {
+              var source = sources[i];
+              if (source.kind === 'video') {
+                if (source.facing && source.facing == "environment") {
+                  options.video.optional.push({'sourceId': source.id});
                 }
               }
             }
@@ -135,26 +118,20 @@
 
           context = canvas.getContext('2d');
           texture = new THREE.Texture(canvas);
-          texture.video = video;
           texture.context = context;
-          texture.minFilter = THREE.LinearMipMapLinearFilter;
-          texture.magFilter = THREE.NearestFilter;
+          
+          // If you do not use powersOf2, or you want to adjust things more, you could use these:
+          //texture.minFilter = THREE.LinearMipMapLinearFilter;
+          //texture.magFilter = THREE.NearestFilter;
 
           var cameraPlane = new THREE.PlaneGeometry(1920, 1280);
 
           cameraMesh = new THREE.Mesh(cameraPlane, new THREE.MeshBasicMaterial({
-            color: 0xffffff, opacity: 1, map: texture, side: THREE.DoubleSide
+            color: 0xffffff, opacity: 1, map: texture
           }));
           cameraMesh.position.z = -600;
 
           scene.add(cameraMesh);
-
-          var floorMaterial = new THREE.MeshBasicMaterial({
-            color: 0xffffff
-          });
-
-          var geometry = new THREE.PlaneBufferGeometry(1000, 1000);
-
         }
 
         function streamError(error) {
@@ -230,11 +207,11 @@
               var sepiaGreen = (red * 0.349) + (green * 0.686) + (blue * 0.168);
               var sepiaBlue = (red * 0.272) + (green * 0.534) + (blue * 0.131);
 
-              var randomRed = Math.random() * 50;
+              var randomNoise = Math.random() * 50;
 
-              sepiaRed += randomRed;
-              sepiaGreen += randomRed;
-              sepiaBlue += randomRed;
+              sepiaRed += randomNoise;
+              sepiaGreen += randomNoise;
+              sepiaBlue += randomNoise;
 
               sepiaRed = sepiaRed > 255 ? 255 : sepiaRed;
               sepiaGreen = sepiaGreen > 255 ? 255 : sepiaGreen;
@@ -263,8 +240,8 @@
 
         requestAnimationFrame(animate);
 
-        update(clock.getDelta());
-        render(clock.getDelta());
+        update();
+        render();
       }
 
       function resize() {
