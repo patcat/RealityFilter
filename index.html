@@ -84,7 +84,7 @@
 
         if (typeof MediaStreamTrack === 'undefined' && navigator.getUserMedia) {
           alert('This browser doesn\'t support this demo :(');
-        } else {
+        } if (MediaStreamTrack.getSources) {
           MediaStreamTrack.getSources(function(sources) {
             for (var i = 0; i !== sources.length; ++i) {
               var source = sources[i];
@@ -97,6 +97,11 @@
             
             navigator.getUserMedia(options, streamFound, streamError);
           });
+        } else {
+          navigator.mediaDevices.getUserMedia({ video: { facingMode: { exact: "environment" } } })
+            .then(function (stream) {
+              streamFound(stream);
+            });
         }
 
         function streamFound(stream) {
