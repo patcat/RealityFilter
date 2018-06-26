@@ -84,7 +84,7 @@
 
         if (typeof MediaStreamTrack === 'undefined' && navigator.getUserMedia) {
           alert('This browser doesn\'t support this demo :(');
-        } if (MediaStreamTrack.getSources) {
+        } else if (MediaStreamTrack.getSources) {
           MediaStreamTrack.getSources(function(sources) {
             for (var i = 0; i !== sources.length; ++i) {
               var source = sources[i];
