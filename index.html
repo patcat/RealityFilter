@@ -98,9 +98,12 @@
             navigator.getUserMedia(options, streamFound, streamError);
           });
         } else {
-          navigator.mediaDevices.getUserMedia({ video: { facingMode: { exact: "environment" } } })
+          navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } })
             .then(function (stream) {
               streamFound(stream);
+            })
+            .catch(function (err) {
+              alert('Sorry! We have had an error, please try on a different device. Error was: ' + err);
             });
         }
 
